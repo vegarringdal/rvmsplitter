@@ -8,8 +8,8 @@ Helper to split large rvm filer, so I can use [rvmparser](https://github.com/cdy
 * then debug and run
 
 # Build new executable
-* `deno compile --allow-all --target=x86_64-unknown-linux-gnu --output rvmsplitter main.ts`
-* `deno compile --allow-all --target=x86_64-pc-windows-msvc --output rvmsplitter main.ts`
+* `deno compile --allow-all --target=x86_64-unknown-linux-gnu --output ./dist/rvmsplitter ./src/main.ts`
+* `deno compile --allow-all --target=x86_64-pc-windows-msvc --output ./dist/rvmsplitter ./src/main.ts`
 
 
 # Usage
