@@ -131,7 +131,7 @@ while (true) {
           // extract three
           const buffer = await readRange(file, {
             start: groupStart,
-            end: chunkStart + i + 20,
+            end: chunkStart + i + 20, //+20 to get extra bytes rvm parser expects to find, like version
           });
 
           // we will now collect all locations of CNTB/CNTE/PRIM/CNTE
