@@ -4,7 +4,8 @@ Helper to split large rvm filer, so I can use [rvmparser](https://github.com/cdy
 
 
 # Development/run/debug
-* just use and use debug and run
+* add input/arg in .vscode/lunch.json to match your input and output file.
+* then debug and run
 
 # Build new executable
 * `deno compile --allow-all --target=x86_64-unknown-linux-gnu --output rvmsplitter main.ts`
