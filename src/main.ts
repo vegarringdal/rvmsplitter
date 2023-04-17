@@ -221,6 +221,18 @@ while (true) {
                 types.push("PRIM");
                 break;
 
+              // OBST
+              case a === 79 && b === 66 && c === 83 && d === 84:
+                startPositions.push(y - 3);
+                types.push("OBST");
+                break;
+
+              // INSU
+              case a === 73 && b === 78 && c === 83 && d === 85:
+                startPositions.push(y - 3);
+                types.push("INSU");
+                break;
+
               // COLR
               case a === 67 && b === 79 && c === 76 && d === 82:
                 startPositions.push(y - 3);
