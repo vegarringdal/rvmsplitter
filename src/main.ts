@@ -134,7 +134,7 @@ while (true) {
 
           const titleStart = 32;
           const titleLength =
-            new DataView(headerBuffer.buffer).getInt32(
+            new DataView(headerBuffer.buffer).getUint32(
               titleStart - 4, //there is a uint32 before header telling us how long it is
               false
             ) * 4;
@@ -142,7 +142,7 @@ while (true) {
           const dateStart = titleStart + titleLength + 8;
 
           const dateLength =
-            new DataView(headerBuffer.buffer).getInt32(
+            new DataView(headerBuffer.buffer).getUint32(
               dateStart - 4, //there is a uint32 before date telling us how long it is
               false
             ) * 4;
@@ -255,7 +255,7 @@ while (true) {
             // just for debug
             const _type = types[i];
 
-            new DataView(dummyFloat32Buffer.buffer).setInt32(
+            new DataView(dummyFloat32Buffer.buffer).setUint32(
               0,
               headerBuffer.length + x,
               false // important, needs to be in BIG endian
