@@ -30,8 +30,12 @@ if (Object.keys(flags).includes("help")) {
   console.log("--input=somefile.rvm ");
   console.log("--output=outputfile.rvm");
   console.log("");
-  console.log("Output will be formatted like this: \'outputfile_X_.rvm' where X is root number");
-  console.log("It will also print title and date from header, with json extensionoutputfile.json");
+  console.log(
+    "Output will be formatted like this: 'outputfile_X_.rvm' where X is root number"
+  );
+  console.log(
+    "It will also print title and date from header, with json extensionoutputfile.json"
+  );
   console.log("");
   console.log("OPTIONAL OPTIONS:");
   console.log("-----------------------------------------------");
@@ -288,9 +292,7 @@ if (flags.rvmparser) {
   if (flags["tolerance"]) {
     defaultCmd.push(`--tolerance=${flags["tolerance"]}`);
   } else {
-    if (flags["tolerance"]) {
-      defaultCmd.push(`--tolerance=${0.01}`);
-    }
+    defaultCmd.push(`--tolerance=${0.01}`);
   }
 
   if (flags["output-gltf-rotate-z-to-y"]) {
@@ -317,7 +319,7 @@ if (flags.rvmparser) {
         filePath,
       ]);
       console.log("-----------------------------------------------");
-      console.log("About to run", cmd.join(""));
+      console.log("About to run", cmd.join("  "));
       console.log("-----------------------------------------------");
       const p = Deno.run({ cmd, stderr: "inherit", stdout: "inherit" });
       await p.status().catch((e) => {
@@ -339,7 +341,10 @@ const splitterPerformace = performance.measure(
 const parserPerformace = performance.measure("RVMPARSER", "MIDDLE", "END");
 const allPerformace = performance.measure("ALL", "START", "END");
 console.log("-----------------------------------------------");
-console.log("RVM SPLITTER runtime ms:", Math.floor(splitterPerformace.duration));
+console.log(
+  "RVM SPLITTER runtime ms:",
+  Math.floor(splitterPerformace.duration)
+);
 console.log("RVM PARSER runtime ms:", Math.floor(parserPerformace.duration));
 console.log("TOTAL runtime ms:", Math.floor(allPerformace.duration));
 console.log("-----------------------------------------------");
