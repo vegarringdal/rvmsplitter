@@ -13,12 +13,12 @@ if (flags.help) {
     "----------------------------------------------------------------------------------------------"
   );
   console.log("linux:");
-  console.log("rvmsplitter --input=somefile.rmv --output=outputfile.rvm");
+  console.log("rvmsplitter --input=somefile.rvm --output=outputfile.rvm");
   console.log(
     "----------------------------------------------------------------------------------------------"
   );
   console.log("windows:");
-  console.log("rvmsplitter.exe --input=somefile.rmv --output=outputfile.rvm");
+  console.log("rvmsplitter.exe --input=somefile.rvm --output=outputfile.rvm");
   console.log(
     "----------------------------------------------------------------------------------------------"
   );
