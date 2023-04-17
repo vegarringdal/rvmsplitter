@@ -1,5 +1,5 @@
 *.rvm
 *.glb
 /temp
-rvmsplitter
-rvmsplitter.exe
+*rvmsplitter*
+*rvmparser*
