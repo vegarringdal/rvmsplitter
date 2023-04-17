@@ -1,33 +1,48 @@
 import { readRange } from "https://deno.land/std@0.183.0/io/read_range.ts";
 import { parse } from "https://deno.land/std@0.182.0/flags/mod.ts";
+import { dirname } from "https://deno.land/std@0.183.0/path/mod.ts";
+import * as path from "https://deno.land/std@0.183.0/path/mod.ts";
 
-// timer
-console.time("Execution time");
+performance.mark("START");
+
+/*******************************************************************************
+ * FLAGS
+ */
 
 const flags = parse(Deno.args, {
-  string: ["input", "output", "help"],
+  string: [
+    "input",
+    "output",
+    "help",
+    "rvmparser-executable",
+    "output-gltf-split-level",
+    "output-gltf-rotate-z-to-y",
+    "tolerance",
+    "output-gltf",
+    "output-gltf-center",
+  ],
 });
 
-if (flags.help) {
-  console.log(
-    "----------------------------------------------------------------------------------------------"
-  );
-  console.log("linux:");
-  console.log("rvmsplitter --input=somefile.rvm --output=outputfile.rvm");
-  console.log(
-    "----------------------------------------------------------------------------------------------"
-  );
-  console.log("windows:");
-  console.log("rvmsplitter.exe --input=somefile.rvm --output=outputfile.rvm");
-  console.log(
-    "----------------------------------------------------------------------------------------------"
-  );
-  console.log(
-    "outputfile.rvm will be converted into outputfile-X.rvm, where x is the site number"
-  );
-  console.log(
-    "----------------------------------------------------------------------------------------------"
-  );
+if (Object.keys(flags).includes("help")) {
+  console.log("");
+  console.log("MANDATORY OPTIONS:");
+  console.log("-----------------------------------------------");
+  console.log("--input=somefile.rvm ");
+  console.log("--output=outputfile.rvm");
+  console.log("");
+  console.log("Output will be formatted like this: \'outputfile_X_.rvm' where X is root number");
+  console.log("It will also print title and date from header, with json extensionoutputfile.json");
+  console.log("");
+  console.log("OPTIONAL OPTIONS:");
+  console.log("-----------------------------------------------");
+  console.log("--rvmparser=rvmparser.exe");
+  console.log("");
+  console.log("These are set if --rvmparser is used");
+  console.log("--output-gltf-split-level=3          default: 3");
+  console.log("--output-gltf-rotate-z-to-y=false    default: false");
+  console.log("--tolerance=0.01                     default: 0.01");
+  console.log("-----------------------------------------------");
+  console.log("");
   Deno.exit(5);
 }
 
@@ -40,9 +55,14 @@ if (!flags.output) {
   Deno.exit(5);
 }
 
+/*******************************************************************************
+ * MISC VARIABLES
+ */
+
 // file info
 const file = await Deno.open(flags.input, { read: true });
 const stats = await file.stat();
+const outputFolder = path.resolve(dirname(flags.output));
 
 //chunks we are reading
 let chunkStart = 0;
@@ -55,6 +75,10 @@ let siteCount = 0;
 let groupStart = 0;
 let headerBuffer = new Uint8Array();
 const blockParsed = new Set();
+
+/*******************************************************************************
+ * RVM SPLITTER
+ */
 
 while (true) {
   if (chunkEnd + chunckReadSize < stats.size) {
@@ -101,6 +125,40 @@ while (true) {
         // extract header if no site count
         if (treeLvl === 0 && siteCount === 0) {
           headerBuffer = await readRange(file, { start: 0, end: i - 4 });
+
+          // read out title and date to json file
+
+          const titleStart = 32;
+          const titleLength =
+            new DataView(headerBuffer.buffer).getInt32(
+              titleStart - 4, //there is a uint32 before header telling us how long it is
+              false
+            ) * 4;
+
+          const dateStart = titleStart + titleLength + 8;
+
+          const dateLength =
+            new DataView(headerBuffer.buffer).getInt32(
+              dateStart - 4, //there is a uint32 before date telling us how long it is
+              false
+            ) * 4;
+
+          const title = new TextDecoder().decode(
+            headerBuffer.slice(titleStart, titleStart + titleLength)
+          );
+          const date = new TextDecoder().decode(
+            headerBuffer.slice(dateStart, dateStart + dateLength)
+          );
+
+          await Deno.writeFile(
+            `${flags.output.split(".rvm")[0]}.json`,
+            new TextEncoder().encode(
+              JSON.stringify({
+                title,
+                date,
+              })
+            )
+          );
         }
 
         // log from where we need to extract tree from
@@ -203,7 +261,7 @@ while (true) {
           tempBuffer.set(new Uint8Array(buffer), headerBuffer.length);
 
           await Deno.writeFile(
-            `${flags.output.split(".rvm")[0]}-${siteCount}.rvm`,
+            `${flags.output.split(".rvm")[0]}_${siteCount}_.rvm`,
             tempBuffer
           );
 
@@ -218,4 +276,70 @@ while (true) {
   }
 }
 
-console.timeEnd("Execution time");
+performance.mark("MIDDLE");
+
+/*******************************************************************************
+ * RVM PARSER
+ */
+
+if (flags.rvmparser) {
+  const defaultCmd = [path.resolve(flags.rvmparser as string)] as string[];
+
+  if (flags["tolerance"]) {
+    defaultCmd.push(`--tolerance=${flags["tolerance"]}`);
+  } else {
+    if (flags["tolerance"]) {
+      defaultCmd.push(`--tolerance=${0.01}`);
+    }
+  }
+
+  if (flags["output-gltf-rotate-z-to-y"]) {
+    defaultCmd.push(
+      `output-gltf-rotate-z-to-y=${flags["output-gltf-rotate-z-to-y"]}`
+    );
+  } else {
+    defaultCmd.push(`--output-gltf-rotate-z-to-y=${false}`);
+  }
+
+  if (flags["output-gltf-split-level"]) {
+    defaultCmd.push(
+      `--output-gltf-split-level=${flags["output-gltf-split-level"]}`
+    );
+  } else {
+    defaultCmd.push(`--output-gltf-split-level=${3}`);
+  }
+
+  for await (const dirEntry of Deno.readDir(outputFolder)) {
+    if (dirEntry.isFile && dirEntry.name?.toLowerCase().includes(".rvm")) {
+      const filePath = path.join(outputFolder, dirEntry.name);
+      const cmd = defaultCmd.concat([
+        `--output-gltf=${filePath.toLowerCase().replace(".rvm", ".glb")}`,
+        filePath,
+      ]);
+      console.log("-----------------------------------------------");
+      console.log("About to run", cmd.join(""));
+      console.log("-----------------------------------------------");
+      const p = Deno.run({ cmd, stderr: "inherit", stdout: "inherit" });
+      await p.status().catch((e) => {
+        console.log(e);
+      });
+    }
+  }
+}
+
+performance.mark("END");
+
+// print runtime
+
+const splitterPerformace = performance.measure(
+  "RVMSPLITTER",
+  "START",
+  "MIDDLE"
+);
+const parserPerformace = performance.measure("RVMPARSER", "MIDDLE", "END");
+const allPerformace = performance.measure("ALL", "START", "END");
+console.log("-----------------------------------------------");
+console.log("RVM SPLITTER runtime ms:", Math.floor(splitterPerformace.duration));
+console.log("RVM PARSER runtime ms:", Math.floor(parserPerformace.duration));
+console.log("TOTAL runtime ms:", Math.floor(allPerformace.duration));
+console.log("-----------------------------------------------");
