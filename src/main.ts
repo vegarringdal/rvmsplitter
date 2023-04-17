@@ -50,7 +50,7 @@ let chunkEnd = 0;
 const chunckReadSize = 25_000_000;
 
 // parse info
-let threeLvl = 0;
+let treeLvl = 0;
 let siteCount = 0;
 let groupStart = 0;
 let headerBuffer = new Uint8Array();
@@ -99,16 +99,16 @@ while (true) {
         blockParsed.add(chunkStart + i);
 
         // extract header if no site count
-        if (threeLvl === 0 && siteCount === 0) {
+        if (treeLvl === 0 && siteCount === 0) {
           headerBuffer = await readRange(file, { start: 0, end: i - 4 });
         }
 
         // log from where we need to extract tree from
-        if (threeLvl === 0) {
+        if (treeLvl === 0) {
           groupStart = chunkStart + (i - 3);
         }
 
-        threeLvl++;
+        treeLvl++;
 
         break;
 
@@ -121,9 +121,9 @@ while (true) {
         }
         blockParsed.add(chunkStart + i);
 
-        threeLvl--;
+        treeLvl--;
 
-        if (threeLvl === 0) {
+        if (treeLvl === 0) {
           // group done
 
           siteCount++;
