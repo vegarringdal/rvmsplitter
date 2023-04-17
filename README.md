@@ -2,6 +2,7 @@
 
 Helper to split large rvm filer, so I can use [rvmparser](https://github.com/cdyk/rvmparser) without using to much memory on Azure Container instance
 
+> some asbuilt files have issues. not solved why rvmparser is unable to read them, it just says successfully parsed
 
 ## Development/run/debug
 * add input/arg in .vscode/lunch.json to match your input and output file.
