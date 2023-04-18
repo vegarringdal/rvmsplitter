@@ -34,7 +34,7 @@ if (Object.keys(flags).includes("help")) {
     "Output will be formatted like this: 'outputfile_X_.rvm' where X is root number"
   );
   console.log(
-    "It will also print title and date from header, with json extensionoutputfile.json"
+    "It will also print title and date from header, with json extension 'outputfile.json'"
   );
   console.log("");
   console.log("OPTIONAL OPTIONS:");
