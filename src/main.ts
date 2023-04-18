@@ -79,6 +79,10 @@ let siteCount = 0;
 let groupStart = 0;
 let headerBuffer = new Uint8Array();
 const blockParsed = new Set();
+const endBuffer = new Uint8Array([
+  0, 0, 0, 0, 0, 0, 0, 69, 0, 0, 0, 78, 0, 0, 0, 68, 0, 0, 0, 58, 0, 0, 0, 0, 0,
+  0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 0,
+]).reverse();
 
 /*******************************************************************************
  * RVM SPLITTER
@@ -193,7 +197,13 @@ while (true) {
           // extract three
           const buffer = await readRange(file, {
             start: groupStart,
-            end: chunkStart + i + 20, //+20 to get extra bytes rvm parser expects to find, like version
+            end: chunkStart + i + 20 + endBuffer.length, //+20 to get extra bytes rvm parser expects to find, like version + endbuffer we will add
+          });
+
+          // we need to update with "default END:" tag, so naviswork will be able to read it
+          const at = buffer.length - 1;
+          endBuffer.forEach((x, i) => {
+            buffer[at - i] = x;
           });
 
           // we will now collect all locations of CNTB/CNTE/PRIM/CNTE
@@ -244,9 +254,16 @@ while (true) {
                 startPositions.push(y - 3);
                 types.push("CNTE");
                 break;
+
+              // END:
+              case a === 69 && b === 78 && c === 68 && d === 58:
+                startPositions.push(y - 3);
+                types.push("END:");
+                break;
             }
           }
-
+          // add as last "expected pointer"
+          startPositions.push(buffer.length - 4);
           // now we have all locations, lets update buffer
 
           let fromLocation = startPositions.shift() || 0;
