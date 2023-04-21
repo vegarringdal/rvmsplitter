@@ -110,7 +110,7 @@ while (true) {
   const bytes = await readRange(file, { start: chunkStart, end: chunkEnd });
 
   // -12, since we search i+12
-  for (let i = 0; i < bytes.length - 12; i++) {
+  for (let i = 0; i < bytes.length - 20; i++) {
     // we will look for three structures in file "SITES"
     // these begin with CNTB and end with CNTE
     // there is also groups inside groups
@@ -119,10 +119,22 @@ while (true) {
     const b = bytes[i + 4];
     const c = bytes[i + 8];
     const d = bytes[i + 12];
+      // I prob should read out number in 13-16 and jump
+    const e = bytes[i + 17]; // always 0
+    const f = bytes[i + 18]; // always 0
+    const g = bytes[i + 19]; // always 0
+    const h = bytes[i + 20]; // always 1
 
     switch (true) {
       // CNTB
-      case a === 67 && b === 78 && c === 84 && d === 66:
+      case a === 67 &&
+        b === 78 &&
+        c === 84 &&
+        d === 66 &&
+        e === 0 &&
+        f === 0 &&
+        g === 0 &&
+        h === 1:
         // since we do start-50 we might get overlast, if we do we need to check
         // if it handled, then we break
         if (blockParsed.has(chunkStart + i)) {
@@ -179,7 +191,14 @@ while (true) {
         break;
 
       // CNTE
-      case a === 67 && b === 78 && c === 84 && d === 69:
+      case a === 67 &&
+        b === 78 &&
+        c === 84 &&
+        d === 69 &&
+        e === 0 &&
+        f === 0 &&
+        g === 0 &&
+        h === 1:
         // since we do start-50 we might get overlast, if we do we need to check
         // if it handled, then we break
         if (blockParsed.has(chunkStart + i)) {
@@ -217,46 +236,100 @@ while (true) {
             const b = buffer[y + 4];
             const c = buffer[y + 8];
             const d = buffer[y + 12];
+            // I prob should read out number in 13-16 and jump
+            const e = buffer[y + 17];
+            const f = buffer[y + 18];
+            const g = buffer[y + 19];
+            const h = buffer[y + 20];
 
             switch (true) {
               // CNTB
-              case a === 67 && b === 78 && c === 84 && d === 66:
+              case a === 67 &&
+                b === 78 &&
+                c === 84 &&
+                d === 66 &&
+                e === 0 &&
+                f === 0 &&
+                g === 0 &&
+                h === 1:
                 startPositions.push(y - 3);
                 types.push("CNTB");
                 break;
 
               // PRIM
-              case a === 80 && b === 82 && c === 73 && d === 77:
+              case a === 80 &&
+                b === 82 &&
+                c === 73 &&
+                d === 77 &&
+                e === 0 &&
+                f === 0 &&
+                g === 0 &&
+                h === 1:
                 startPositions.push(y - 3);
                 types.push("PRIM");
                 break;
 
               // OBST
-              case a === 79 && b === 66 && c === 83 && d === 84:
+              case a === 79 &&
+                b === 66 &&
+                c === 83 &&
+                d === 84 &&
+                e === 0 &&
+                f === 0 &&
+                g === 0 &&
+                h === 1:
                 startPositions.push(y - 3);
                 types.push("OBST");
                 break;
 
               // INSU
-              case a === 73 && b === 78 && c === 83 && d === 85:
+              case a === 73 &&
+                b === 78 &&
+                c === 83 &&
+                d === 85 &&
+                e === 0 &&
+                f === 0 &&
+                g === 0 &&
+                h === 1:
                 startPositions.push(y - 3);
                 types.push("INSU");
                 break;
 
               // COLR
-              case a === 67 && b === 79 && c === 76 && d === 82:
+              case a === 67 &&
+                b === 79 &&
+                c === 76 &&
+                d === 82 &&
+                e === 0 &&
+                f === 0 &&
+                g === 0 &&
+                h === 1:
                 startPositions.push(y - 3);
                 types.push("COLR");
                 break;
 
               // CNTE
-              case a === 67 && b === 78 && c === 84 && d === 69:
+              case a === 67 &&
+                b === 78 &&
+                c === 84 &&
+                d === 69 &&
+                e === 0 &&
+                f === 0 &&
+                g === 0 &&
+                h === 1:
                 startPositions.push(y - 3);
                 types.push("CNTE");
                 break;
 
               // END:
-              case a === 69 && b === 78 && c === 68 && d === 58:
+              case a === 69 &&
+                b === 78 &&
+                c === 68 &&
+                d === 58 &&
+                e === 0 &&
+                f === 0 &&
+                g === 0 &&
+                h === 1:
                 startPositions.push(y - 3);
                 types.push("END:");
                 break;
@@ -370,6 +443,7 @@ const splitterPerformace = performance.measure(
 const parserPerformace = performance.measure("RVMPARSER", "MIDDLE", "END");
 const allPerformace = performance.measure("ALL", "START", "END");
 console.log("-----------------------------------------------");
+console.log("files:", siteCount);
 console.log(
   "RVM SPLITTER runtime ms:",
   Math.floor(splitterPerformace.duration)
