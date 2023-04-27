@@ -84,6 +84,8 @@ const endBuffer = new Uint8Array([
   0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 0,
 ]).reverse();
 
+let date, title;
+
 /*******************************************************************************
  * RVM SPLITTER
  */
@@ -119,7 +121,7 @@ while (true) {
     const b = bytes[i + 4];
     const c = bytes[i + 8];
     const d = bytes[i + 12];
-      // I prob should read out number in 13-16 and jump
+    // I prob should read out number in 13-16 and jump
     const e = bytes[i + 17]; // always 0
     const f = bytes[i + 18]; // always 0
     const g = bytes[i + 19]; // always 0
@@ -163,21 +165,11 @@ while (true) {
               false
             ) * 4;
 
-          const title = new TextDecoder().decode(
+          title = new TextDecoder().decode(
             headerBuffer.slice(titleStart, titleStart + titleLength)
           );
-          const date = new TextDecoder().decode(
+          date = new TextDecoder().decode(
             headerBuffer.slice(dateStart, dateStart + dateLength)
-          );
-
-          await Deno.writeFile(
-            `${flags.output.split(".rvm")[0]}.json`,
-            new TextEncoder().encode(
-              JSON.stringify({
-                title,
-                date,
-              })
-            )
           );
         }
 
@@ -430,6 +422,18 @@ if (flags.rvmparser) {
     }
   }
 }
+
+// print info
+await Deno.writeFile(
+  `${flags.output.split(".rvm")[0]}.json`,
+  new TextEncoder().encode(
+    JSON.stringify({
+      title,
+      date,
+      warning: treeLvl ? "Unfinished group tree found, file might be corrupt" : null,
+    })
+  )
+);
 
 performance.mark("END");
 
