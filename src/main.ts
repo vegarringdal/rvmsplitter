@@ -85,6 +85,7 @@ const endBuffer = new Uint8Array([
 ]).reverse();
 
 let date, title;
+let endtagMissing = true;
 
 /*******************************************************************************
  * RVM SPLITTER
@@ -180,6 +181,17 @@ while (true) {
 
         treeLvl++;
 
+        break;
+
+      case a === 69 &&
+        b === 78 &&
+        c === 68 &&
+        d === 58 &&
+        e === 0 &&
+        f === 0 &&
+        g === 0 &&
+        h === 1:
+        endtagMissing = false;
         break;
 
       // CNTE
@@ -430,7 +442,7 @@ await Deno.writeFile(
     JSON.stringify({
       title,
       date,
-      warning: treeLvl ? "Unfinished group tree found, file might be corrupt" : null,
+      warning: endtagMissing ? "Endtag missing, file might be corrupt" : null,
     })
   )
 );
