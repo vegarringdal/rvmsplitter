@@ -14,6 +14,7 @@ const flags = parse(Deno.args, {
     "input",
     "output",
     "help",
+    "split-lvl",
     "rvmparser-executable",
     "output-gltf-split-level",
     "output-gltf-rotate-z-to-y",
@@ -39,6 +40,8 @@ if (Object.keys(flags).includes("help")) {
   console.log("");
   console.log("OPTIONAL OPTIONS:");
   console.log("-----------------------------------------------");
+  console.log("--split-lvl                          default=0");
+  console.log("   This will extract files at this lvl, this also remove parents and set lvl as root");
   console.log("--rvmparser=rvmparser.exe");
   console.log("");
   console.log("These are set if --rvmparser is used");
@@ -77,6 +80,10 @@ const chunckReadSize = 25_000_000;
 let treeLvl = 0;
 let siteCount = 0;
 let groupStart = 0;
+let splitLvl = parseInt(flags["split-lvl"] || "") || 0;
+if (isNaN(splitLvl)) {
+  splitLvl = 0;
+}
 let headerBuffer = new Uint8Array();
 const blockParsed = new Set();
 const endBuffer = new Uint8Array([
@@ -175,7 +182,7 @@ while (true) {
         }
 
         // log from where we need to extract tree from
-        if (treeLvl === 0) {
+        if (treeLvl === splitLvl) {
           groupStart = chunkStart + (i - 3);
         }
 
@@ -212,7 +219,7 @@ while (true) {
 
         treeLvl--;
 
-        if (treeLvl === 0) {
+        if (treeLvl === splitLvl) {
           // group done
 
           siteCount++;

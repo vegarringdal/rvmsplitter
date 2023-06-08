@@ -41,6 +41,8 @@ It will also print title and date from header, with json extensionoutputfile.jso
 
 OPTIONAL OPTIONS:
 -----------------------------------------------
+--split-lvl=1 (default is 0)                        
+  # When this is used it splits files out on this lvl. also sets this lvl as root removing parent from tree
 --rvmparser=rvmparser.exe
 
 These are set if --rvmparser is used
