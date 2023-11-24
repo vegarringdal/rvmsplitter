@@ -41,7 +41,9 @@ if (Object.keys(flags).includes("help")) {
   console.log("OPTIONAL OPTIONS:");
   console.log("-----------------------------------------------");
   console.log("--split-lvl                          default=0");
-  console.log("   This will extract files at this lvl, this also remove parents and set lvl as root");
+  console.log(
+    "   This will extract files at this lvl, this also remove parents and set lvl as root"
+  );
   console.log("--rvmparser=rvmparser.exe");
   console.log("");
   console.log("These are set if --rvmparser is used");
@@ -93,6 +95,7 @@ const endBuffer = new Uint8Array([
 
 let date, title;
 let endtagMissing = true;
+let sitesWithoutPrim = 0;
 
 /*******************************************************************************
  * RVM SPLITTER
@@ -186,7 +189,13 @@ while (true) {
           groupStart = chunkStart + (i - 3);
         }
 
-        treeLvl++;
+        if (treeLvl < 0) {
+          // file is not balanced, not sure why I got middle if file
+          // more CNTE than CNTB
+          treeLvl === 0;
+        } else {
+          treeLvl++;
+        }
 
         break;
 
@@ -352,6 +361,18 @@ while (true) {
 
           let fromLocation = startPositions.shift() || 0;
           const dummyFloat32Buffer = new Uint8Array(4);
+
+          const typeSet = new Set(types);
+          typeSet.delete("HEAD");
+          typeSet.delete("MODL");
+          typeSet.delete("CNTB");
+          typeSet.delete("CNTE");
+          typeSet.delete("END:");
+
+          if (typeSet.size === 0) {
+            sitesWithoutPrim++;
+          }
+
           startPositions.forEach((x, i) => {
             // just for debug
             const _type = types[i];
@@ -442,6 +463,11 @@ if (flags.rvmparser) {
   }
 }
 
+let warnings = "";
+if (endtagMissing) {
+  warnings = "Endtag missing, file might be corrupt. ";
+}
+
 // print info
 await Deno.writeFile(
   `${flags.output.split(".rvm")[0]}.json`,
@@ -449,7 +475,7 @@ await Deno.writeFile(
     JSON.stringify({
       title,
       date,
-      warning: endtagMissing ? "Endtag missing, file might be corrupt" : null,
+      warning: warnings === "" ? null : warnings,
     })
   )
 );
@@ -467,6 +493,12 @@ const parserPerformace = performance.measure("RVMPARSER", "MIDDLE", "END");
 const allPerformace = performance.measure("ALL", "START", "END");
 console.log("-----------------------------------------------");
 console.log("files:", siteCount);
+console.log(
+  "files without prim:",
+  sitesWithoutPrim,
+  `(${siteCount - sitesWithoutPrim})`
+);
+
 console.log(
   "RVM SPLITTER runtime ms:",
   Math.floor(splitterPerformace.duration)
