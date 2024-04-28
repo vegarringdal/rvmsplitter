@@ -6,13 +6,24 @@
   "configurations": [
     {
       "request": "launch",
-      "name": "Run & Debug main.ts",
+      "name": "Run & Debug main.ts yy",
       "type": "node",
       "program": "${workspaceFolder}/src/main.ts",
       "cwd": "${workspaceFolder}",
       "runtimeExecutable": "C:\\ProgramData\\chocolatey\\lib\\deno\\deno.EXE",
       "runtimeArgs": ["run", "--unstable", "--inspect-wait", "--allow-all"],
-      "args": ["--input=xx.rvm", "--output=./temp/f.rvm"],
+      "args": ["--input=yy.rvm", "--output=./temp/yy.rvm"],
+      "attachSimplePort": 9229
+    },
+    {
+      "request": "launch",
+      "name": "Run & Debug main.ts xx",
+      "type": "node",
+      "program": "${workspaceFolder}/src/main.ts",
+      "cwd": "${workspaceFolder}",
+      "runtimeExecutable": "C:\\ProgramData\\chocolatey\\lib\\deno\\deno.EXE",
+      "runtimeArgs": ["run", "--unstable", "--inspect-wait", "--allow-all"],
+      "args": ["--input=xx.rvm", "--output=./temp/xx.rvm"],
       "attachSimplePort": 9229
     }
   ]

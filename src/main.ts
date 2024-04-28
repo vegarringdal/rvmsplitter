@@ -100,318 +100,325 @@ let sitesWithoutPrim = 0;
 /*******************************************************************************
  * RVM SPLITTER
  */
+try {
+  while (true) {
+    if (chunkEnd + chunckReadSize < stats.size) {
+      chunkEnd += chunckReadSize;
+    } else if (chunkEnd + chunckReadSize >= stats.size) {
+      chunkEnd = stats.size - 1;
+    }
 
-while (true) {
-  if (chunkEnd + chunckReadSize < stats.size) {
-    chunkEnd += chunckReadSize;
-  } else if (chunkEnd + chunckReadSize >= stats.size) {
-    chunkEnd = stats.size - 1;
-  }
+    // just to give some status
+    console.log(
+      `Working from ${Math.floor(chunkStart / 1_000_000)} - ${Math.floor(
+        chunkEnd / 1_000_000
+      )} MB, of total: ${Math.floor(stats.size / 1_000_000)} MB`
+    );
 
-  // just to give some status
-  console.log(
-    `Working from ${Math.floor(chunkStart / 1_000_000)} - ${Math.floor(
-      chunkEnd / 1_000_000
-    )} MB, of total: ${Math.floor(stats.size / 1_000_000)} MB`
-  );
+    // we want to go back, so we dont cut middle of blocks we are looking for
+    if (chunkStart > 0) {
+      chunkStart = chunkStart - 50;
+    }
 
-  // we want to go back, so we dont cut middle of blocks we are looking for
-  if (chunkStart > 0) {
-    chunkStart = chunkStart - 50;
-  }
+    const bytes = await readRange(file, { start: chunkStart, end: chunkEnd });
 
-  const bytes = await readRange(file, { start: chunkStart, end: chunkEnd });
+    // -12, since we search i+12
+    for (let i = 0; i < bytes.length - 20; i++) {
+      // we will look for three structures in file "SITES"
+      // these begin with CNTB and end with CNTE
+      // there is also groups inside groups
 
-  // -12, since we search i+12
-  for (let i = 0; i < bytes.length - 20; i++) {
-    // we will look for three structures in file "SITES"
-    // these begin with CNTB and end with CNTE
-    // there is also groups inside groups
+      const a = bytes[i];
+      const b = bytes[i + 4];
+      const c = bytes[i + 8];
+      const d = bytes[i + 12];
+      // I prob should read out number in 13-16 and jump
+      const e = bytes[i + 17]; // always 0
+      const f = bytes[i + 18]; // always 0
+      const g = bytes[i + 19]; // always 0
+      const h = bytes[i + 20]; // always 1
 
-    const a = bytes[i];
-    const b = bytes[i + 4];
-    const c = bytes[i + 8];
-    const d = bytes[i + 12];
-    // I prob should read out number in 13-16 and jump
-    const e = bytes[i + 17]; // always 0
-    const f = bytes[i + 18]; // always 0
-    const g = bytes[i + 19]; // always 0
-    const h = bytes[i + 20]; // always 1
+      switch (true) {
+        // CNTB
+        case a === 67 &&
+          b === 78 &&
+          c === 84 &&
+          d === 66 &&
+          e === 0 &&
+          f === 0 &&
+          g === 0 &&
+          h === 1:
+          // since we do start-50 we might get overlast, if we do we need to check
+          // if it handled, then we break
+          if (blockParsed.has(chunkStart + i)) {
+            break;
+          }
+          blockParsed.add(chunkStart + i);
 
-    switch (true) {
-      // CNTB
-      case a === 67 &&
-        b === 78 &&
-        c === 84 &&
-        d === 66 &&
-        e === 0 &&
-        f === 0 &&
-        g === 0 &&
-        h === 1:
-        // since we do start-50 we might get overlast, if we do we need to check
-        // if it handled, then we break
-        if (blockParsed.has(chunkStart + i)) {
+          // extract header if no site count
+          if (treeLvl === 0 && siteCount === 0) {
+            headerBuffer = await readRange(file, { start: 0, end: i - 4 });
+
+            // read out title and date to json file
+
+            const titleStart = 32;
+            const titleLength =
+              new DataView(headerBuffer.buffer).getUint32(
+                titleStart - 4, //there is a uint32 before header telling us how long it is
+                false
+              ) * 4;
+
+            const noteStart = titleStart + titleLength;
+            const noteLength =
+              new DataView(headerBuffer.buffer).getUint32(noteStart, false) * 4;
+
+            const dateStart = noteStart + noteLength + 8;
+
+            const dateLength =
+              new DataView(headerBuffer.buffer).getUint32(
+                dateStart - 4, //there is a uint32 before date telling us how long it is
+                false
+              ) * 4;
+
+            title = new TextDecoder().decode(
+              headerBuffer.slice(titleStart, titleStart + titleLength)
+            );
+            date = new TextDecoder().decode(
+              headerBuffer.slice(dateStart, dateStart + dateLength)
+            );
+          }
+
+          // log from where we need to extract tree from
+          if (treeLvl === splitLvl) {
+            groupStart = chunkStart + (i - 3);
+          }
+
+          if (treeLvl < 0) {
+            // file is not balanced, not sure why I got middle if file
+            // more CNTE than CNTB
+            treeLvl === 0;
+          } else {
+            treeLvl++;
+          }
+
           break;
-        }
-        blockParsed.add(chunkStart + i);
 
-        // extract header if no site count
-        if (treeLvl === 0 && siteCount === 0) {
-          headerBuffer = await readRange(file, { start: 0, end: i - 4 });
-
-          // read out title and date to json file
-
-          const titleStart = 32;
-          const titleLength =
-            new DataView(headerBuffer.buffer).getUint32(
-              titleStart - 4, //there is a uint32 before header telling us how long it is
-              false
-            ) * 4;
-
-          const dateStart = titleStart + titleLength + 8;
-
-          const dateLength =
-            new DataView(headerBuffer.buffer).getUint32(
-              dateStart - 4, //there is a uint32 before date telling us how long it is
-              false
-            ) * 4;
-
-          title = new TextDecoder().decode(
-            headerBuffer.slice(titleStart, titleStart + titleLength)
-          );
-          date = new TextDecoder().decode(
-            headerBuffer.slice(dateStart, dateStart + dateLength)
-          );
-        }
-
-        // log from where we need to extract tree from
-        if (treeLvl === splitLvl) {
-          groupStart = chunkStart + (i - 3);
-        }
-
-        if (treeLvl < 0) {
-          // file is not balanced, not sure why I got middle if file
-          // more CNTE than CNTB
-          treeLvl === 0;
-        } else {
-          treeLvl++;
-        }
-
-        break;
-
-      case a === 69 &&
-        b === 78 &&
-        c === 68 &&
-        d === 58 &&
-        e === 0 &&
-        f === 0 &&
-        g === 0 &&
-        h === 1:
-        endtagMissing = false;
-        break;
-
-      // CNTE
-      case a === 67 &&
-        b === 78 &&
-        c === 84 &&
-        d === 69 &&
-        e === 0 &&
-        f === 0 &&
-        g === 0 &&
-        h === 1:
-        // since we do start-50 we might get overlast, if we do we need to check
-        // if it handled, then we break
-        if (blockParsed.has(chunkStart + i)) {
+        case a === 69 &&
+          b === 78 &&
+          c === 68 &&
+          d === 58 &&
+          e === 0 &&
+          f === 0 &&
+          g === 0 &&
+          h === 1:
+          endtagMissing = false;
           break;
-        }
-        blockParsed.add(chunkStart + i);
 
-        treeLvl--;
+        // CNTE
+        case a === 67 &&
+          b === 78 &&
+          c === 84 &&
+          d === 69 &&
+          e === 0 &&
+          f === 0 &&
+          g === 0 &&
+          h === 1:
+          // since we do start-50 we might get overlast, if we do we need to check
+          // if it handled, then we break
+          if (blockParsed.has(chunkStart + i)) {
+            break;
+          }
+          blockParsed.add(chunkStart + i);
 
-        if (treeLvl === splitLvl) {
-          // group done
+          treeLvl--;
 
-          siteCount++;
+          if (treeLvl === splitLvl) {
+            // group done
 
-          // extract three
-          const buffer = await readRange(file, {
-            start: groupStart,
-            end: chunkStart + i + 20 + endBuffer.length, //+20 to get extra bytes rvm parser expects to find, like version + endbuffer we will add
-          });
+            siteCount++;
 
-          // we need to update with "default END:" tag, so naviswork will be able to read it
-          const at = buffer.length - 1;
-          endBuffer.forEach((x, i) => {
-            buffer[at - i] = x;
-          });
+            // extract three
+            const buffer = await readRange(file, {
+              start: groupStart,
+              end: chunkStart + i + 20 + endBuffer.length, //+20 to get extra bytes rvm parser expects to find, like version + endbuffer we will add
+            });
 
-          // we will now collect all locations of CNTB/CNTE/PRIM/CNTE
-          // Since we need to rewrite buffe to contain correct location
+            // we need to update with "default END:" tag, so naviswork will be able to read it
+            const at = buffer.length - 1;
+            endBuffer.forEach((x, i) => {
+              buffer[at - i] = x;
+            });
 
-          const startPositions = [];
-          const types: string[] = [];
+            // we will now collect all locations of CNTB/CNTE/PRIM/CNTE
+            // Since we need to rewrite buffe to contain correct location
 
-          for (let y = 0; y < buffer.length; y++) {
-            const a = buffer[y];
-            const b = buffer[y + 4];
-            const c = buffer[y + 8];
-            const d = buffer[y + 12];
-            // I prob should read out number in 13-16 and jump
-            const e = buffer[y + 17];
-            const f = buffer[y + 18];
-            const g = buffer[y + 19];
-            const h = buffer[y + 20];
+            const startPositions = [];
+            const types: string[] = [];
 
-            switch (true) {
-              // CNTB
-              case a === 67 &&
-                b === 78 &&
-                c === 84 &&
-                d === 66 &&
-                e === 0 &&
-                f === 0 &&
-                g === 0 &&
-                h === 1:
-                startPositions.push(y - 3);
-                types.push("CNTB");
-                break;
+            for (let y = 0; y < buffer.length; y++) {
+              const a = buffer[y];
+              const b = buffer[y + 4];
+              const c = buffer[y + 8];
+              const d = buffer[y + 12];
+              // I prob should read out number in 13-16 and jump
+              const e = buffer[y + 17];
+              const f = buffer[y + 18];
+              const g = buffer[y + 19];
+              const h = buffer[y + 20];
 
-              // PRIM
-              case a === 80 &&
-                b === 82 &&
-                c === 73 &&
-                d === 77 &&
-                e === 0 &&
-                f === 0 &&
-                g === 0 &&
-                h === 1:
-                startPositions.push(y - 3);
-                types.push("PRIM");
-                break;
+              switch (true) {
+                // CNTB
+                case a === 67 &&
+                  b === 78 &&
+                  c === 84 &&
+                  d === 66 &&
+                  e === 0 &&
+                  f === 0 &&
+                  g === 0 &&
+                  h === 1:
+                  startPositions.push(y - 3);
+                  types.push("CNTB");
+                  break;
 
-              // OBST
-              case a === 79 &&
-                b === 66 &&
-                c === 83 &&
-                d === 84 &&
-                e === 0 &&
-                f === 0 &&
-                g === 0 &&
-                h === 1:
-                startPositions.push(y - 3);
-                types.push("OBST");
-                break;
+                // PRIM
+                case a === 80 &&
+                  b === 82 &&
+                  c === 73 &&
+                  d === 77 &&
+                  e === 0 &&
+                  f === 0 &&
+                  g === 0 &&
+                  h === 1:
+                  startPositions.push(y - 3);
+                  types.push("PRIM");
+                  break;
 
-              // INSU
-              case a === 73 &&
-                b === 78 &&
-                c === 83 &&
-                d === 85 &&
-                e === 0 &&
-                f === 0 &&
-                g === 0 &&
-                h === 1:
-                startPositions.push(y - 3);
-                types.push("INSU");
-                break;
+                // OBST
+                case a === 79 &&
+                  b === 66 &&
+                  c === 83 &&
+                  d === 84 &&
+                  e === 0 &&
+                  f === 0 &&
+                  g === 0 &&
+                  h === 1:
+                  startPositions.push(y - 3);
+                  types.push("OBST");
+                  break;
 
-              // COLR
-              case a === 67 &&
-                b === 79 &&
-                c === 76 &&
-                d === 82 &&
-                e === 0 &&
-                f === 0 &&
-                g === 0 &&
-                h === 1:
-                startPositions.push(y - 3);
-                types.push("COLR");
-                break;
+                // INSU
+                case a === 73 &&
+                  b === 78 &&
+                  c === 83 &&
+                  d === 85 &&
+                  e === 0 &&
+                  f === 0 &&
+                  g === 0 &&
+                  h === 1:
+                  startPositions.push(y - 3);
+                  types.push("INSU");
+                  break;
 
-              // CNTE
-              case a === 67 &&
-                b === 78 &&
-                c === 84 &&
-                d === 69 &&
-                e === 0 &&
-                f === 0 &&
-                g === 0 &&
-                h === 1:
-                startPositions.push(y - 3);
-                types.push("CNTE");
-                break;
+                // COLR
+                case a === 67 &&
+                  b === 79 &&
+                  c === 76 &&
+                  d === 82 &&
+                  e === 0 &&
+                  f === 0 &&
+                  g === 0 &&
+                  h === 1:
+                  startPositions.push(y - 3);
+                  types.push("COLR");
+                  break;
 
-              // END:
-              case a === 69 &&
-                b === 78 &&
-                c === 68 &&
-                d === 58 &&
-                e === 0 &&
-                f === 0 &&
-                g === 0 &&
-                h === 1:
-                startPositions.push(y - 3);
-                types.push("END:");
-                break;
+                // CNTE
+                case a === 67 &&
+                  b === 78 &&
+                  c === 84 &&
+                  d === 69 &&
+                  e === 0 &&
+                  f === 0 &&
+                  g === 0 &&
+                  h === 1:
+                  startPositions.push(y - 3);
+                  types.push("CNTE");
+                  break;
+
+                // END:
+                case a === 69 &&
+                  b === 78 &&
+                  c === 68 &&
+                  d === 58 &&
+                  e === 0 &&
+                  f === 0 &&
+                  g === 0 &&
+                  h === 1:
+                  startPositions.push(y - 3);
+                  types.push("END:");
+                  break;
+              }
             }
-          }
-          // add as last "expected pointer"
-          startPositions.push(buffer.length - 4);
-          // now we have all locations, lets update buffer
+            // add as last "expected pointer"
+            startPositions.push(buffer.length - 4);
+            // now we have all locations, lets update buffer
 
-          let fromLocation = startPositions.shift() || 0;
-          const dummyFloat32Buffer = new Uint8Array(4);
+            let fromLocation = startPositions.shift() || 0;
+            const dummyFloat32Buffer = new Uint8Array(4);
 
-          const typeSet = new Set(types);
-          typeSet.delete("HEAD");
-          typeSet.delete("MODL");
-          typeSet.delete("CNTB");
-          typeSet.delete("CNTE");
-          typeSet.delete("END:");
+            const typeSet = new Set(types);
+            typeSet.delete("HEAD");
+            typeSet.delete("MODL");
+            typeSet.delete("CNTB");
+            typeSet.delete("CNTE");
+            typeSet.delete("END:");
 
-          if (typeSet.size === 0) {
-            sitesWithoutPrim++;
-          }
+            if (typeSet.size === 0) {
+              sitesWithoutPrim++;
+            }
 
-          startPositions.forEach((x, i) => {
-            // just for debug
-            const _type = types[i];
+            startPositions.forEach((x, i) => {
+              // just for debug
+              const _type = types[i];
 
-            new DataView(dummyFloat32Buffer.buffer).setUint32(
-              0,
-              headerBuffer.length + x,
-              false // important, needs to be in BIG endian
+              new DataView(dummyFloat32Buffer.buffer).setUint32(
+                0,
+                headerBuffer.length + x,
+                false // important, needs to be in BIG endian
+              );
+
+              buffer[fromLocation + 16] = dummyFloat32Buffer[0];
+              buffer[fromLocation + 17] = dummyFloat32Buffer[1];
+              buffer[fromLocation + 18] = dummyFloat32Buffer[2];
+              buffer[fromLocation + 19] = dummyFloat32Buffer[3];
+              fromLocation = x;
+            });
+
+            // buffer is updated, lets combine it with header and save
+
+            const tempBuffer = new Uint8Array(
+              headerBuffer.length + buffer.length
+            );
+            tempBuffer.set(new Uint8Array(headerBuffer.slice()), 0);
+            tempBuffer.set(new Uint8Array(buffer), headerBuffer.length);
+
+            await Deno.writeFile(
+              `${flags.output.split(".rvm")[0]}_${siteCount}_.rvm`,
+              tempBuffer
             );
 
-            buffer[fromLocation + 16] = dummyFloat32Buffer[0];
-            buffer[fromLocation + 17] = dummyFloat32Buffer[1];
-            buffer[fromLocation + 18] = dummyFloat32Buffer[2];
-            buffer[fromLocation + 19] = dummyFloat32Buffer[3];
-            fromLocation = x;
-          });
+            break;
+          }
+      }
+    }
 
-          // buffer is updated, lets combine it with header and save
-
-          const tempBuffer = new Uint8Array(
-            headerBuffer.length + buffer.length
-          );
-          tempBuffer.set(new Uint8Array(headerBuffer.slice()), 0);
-          tempBuffer.set(new Uint8Array(buffer), headerBuffer.length);
-
-          await Deno.writeFile(
-            `${flags.output.split(".rvm")[0]}_${siteCount}_.rvm`,
-            tempBuffer
-          );
-
-          break;
-        }
+    chunkStart = chunkEnd;
+    if (chunkEnd === stats.size - 1) {
+      break;
     }
   }
-
-  chunkStart = chunkEnd;
-  if (chunkEnd === stats.size - 1) {
-    break;
-  }
+} catch (e) {
+  console.log(e);
 }
 
 performance.mark("MIDDLE");
