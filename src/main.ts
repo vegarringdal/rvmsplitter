@@ -88,6 +88,7 @@ if (isNaN(splitLvl)) {
 }
 let headerBuffer = new Uint8Array();
 const blockParsed = new Set();
+const bufferParsed = new Set();
 const endBuffer = new Uint8Array([
   0, 0, 0, 0, 0, 0, 0, 69, 0, 0, 0, 78, 0, 0, 0, 68, 0, 0, 0, 58, 0, 0, 0, 0, 0,
   0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 0,
@@ -118,6 +119,15 @@ try {
     // we want to go back, so we dont cut middle of blocks we are looking for
     if (chunkStart > 0) {
       chunkStart = chunkStart - 50;
+    }
+
+    if (bufferParsed.size > 10000000) {
+      // there is a limit on how many items can be added to a set
+      // on one model we reached this, so now I will reset if its very high
+
+      blockParsed.clear();
+      blockParsed.add(Array.from(bufferParsed));
+      bufferParsed.clear();
     }
 
     const bytes = await readRange(file, { start: chunkStart, end: chunkEnd });
@@ -154,6 +164,8 @@ try {
             break;
           }
           blockParsed.add(chunkStart + i);
+
+          bufferParsed.add(chunkStart + i);
 
           // extract header if no site count
           if (treeLvl === 0 && siteCount === 0) {
@@ -229,6 +241,7 @@ try {
             break;
           }
           blockParsed.add(chunkStart + i);
+          bufferParsed.add(chunkStart + i);
 
           treeLvl--;
 
